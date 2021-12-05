@@ -180,7 +180,7 @@ class DCGAN():
             'optimizer_state_dict_G': self.optimizerG.state_dict(),
             'model_state_dict_D': self.discriminator.state_dict(),
             'optimizer_state_dict_D': self.optimizerD.state_dict(),
-            'iters': iters,
+            'iters':self.iters,
             'amp': False #changed below if amp is enabled
             }
         if self.amp:
@@ -188,7 +188,7 @@ class DCGAN():
             out['scaler_state_dict_G']=self.scalerG.state_dict()
             out['scaler_state_dict_D']=self.scalerD.state_dict()
 
-        torch.save(os.path.join(directory,model_name))
+        torch.save(out,os.path.join(directory,model_name))
 
     def load_checkpoint(path):
         """Loads a model checkpoint, returns saved epoch."""
