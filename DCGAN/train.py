@@ -14,11 +14,12 @@ from torchvision.datasets import ImageFolder
 from model import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
+from pytorch_fid import fid_score
 #TODO Add argparsing
 #TODO add inception calculations stuff
 torch.backends.cudnn.benchmark = True
 
-
+amp = True
 num_gpu = 1
 num_workers = 4
 image_size = 128
@@ -27,12 +28,15 @@ n_convolution_blocks = 4
 batch_size = 128
 latent_vector_size =128
 num_epochs = 30
-
+model_load_path = None
 model_save_folder = 'checkpoints'
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
-
 epoch = 0
+
+precomputed_inception_score_path = ('home/ej74/128px.nz') #m1, s1
+
+
 
 
 dataset = dset.ImageFolder(root=IMAGE_PATH,
@@ -52,12 +56,22 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                            ]))
 
 
-GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size)
+GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
 print(GAN.generator)
 print(summary(GAN.generator, (latent_vector_size,1,1)))
 print(summary(GAN.discriminator,(3,64,64) ))
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+if model_load_folder is not None:
+    total_epoch = GAN.load_checkpoint(model_load_path)
+    #override amp from model load
+    if amp:
+        GAN.amp = True
+
+else:
+    total_epoch = 0 
+
 
 writer = SummaryWriter()
 
@@ -96,9 +110,12 @@ for epoch in range(num_epochs):
 
             img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
             writer.add_image('Real Images', img_grid)
+    
     print((start_time-time.time())//60,'minutes elapsed this epoch')
-    GAN.save_checkpoint(model_save_folder,epoch,f'epoch{epoch}_model.pt')
 
+    start_time = time.time()
+    GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+    print(f'Save time took: {start_time-time.time()} seconds ')
 
 
 

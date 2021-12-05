@@ -4,7 +4,6 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from utilities import weights_init
-
 class GaussianNoise(nn.Module):
     """Applies gaussian noise to an image input."""
     def __init__(self):
