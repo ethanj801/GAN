@@ -26,7 +26,7 @@ num_features = image_size
 n_convolution_blocks = 4
 batch_size = 128
 latent_vector_size =128
-num_epochs = 1
+num_epochs = 30
 
 
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'

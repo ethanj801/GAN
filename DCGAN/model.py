@@ -178,7 +178,7 @@ class DCGAN():
         out = {'epoch': epoch,
             'model_state_dict_G': self.generator.state_dict(),
             'optimizer_state_dict_G': self.optimizerG.state_dict(),
-            'model_state_dict_D': self.Discriminator.state_dict(),
+            'model_state_dict_D': self.discriminator.state_dict(),
             'optimizer_state_dict_D': self.optimizerD.state_dict(),
             'iters': iters,
             'amp': False #changed below if amp is enabled
