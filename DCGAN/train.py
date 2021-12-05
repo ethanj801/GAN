@@ -28,7 +28,7 @@ batch_size = 128
 latent_vector_size =128
 num_epochs = 30
 
-
+model_save_folder = 'checkpoints'
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 
@@ -65,20 +65,29 @@ fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed no
 print("Starting Training Loop...")
 for epoch in range(num_epochs):
     #Per batch
-    start = time.time()
+    start_time = time.time()
+    errD = 0
+    errG = 0
     for i, data in enumerate(dataloader, 0):
         images = data[0]
-        errD = GAN.train_discriminator(images)
-        errG = GAN.train_generator(batch_size)
+        errD+= GAN.train_discriminator(images)
+        errG+= GAN.train_generator(batch_size)
+	
+        #writer.add_scalar('Generator Loss',errG,GAN.iters)
+        #writer.add_scalar('Discriminator Loss',errD,GAN.iters)
 
-        writer.add_scalar('Generator Loss',errG,GAN.iters)
-        writer.add_scalar('Discriminator Loss',errD,GAN.iters)
-
-        if i % 50 == 0: 
+        if i % 50 == 0:
+            if i!=0:
+                errD/=50
+                errG/=50
+            writer.add_scalar('Generator Loss',errG,GAN.iters)
+            writer.add_scalar('Discriminator Loss',errD,GAN.iters)
             print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
                   % (epoch, num_epochs, i, len(dataloader),
                      errD, errG))
-
+           
+            errD = 0
+            errG = 0
         if GAN.iters % 500 == 0 or (epoch == num_epochs-1 and i == len(dataloader)-1):
             with torch.no_grad():
                 fake_images=GAN.generator(fixed_noise).detach().cpu()
@@ -87,8 +96,8 @@ for epoch in range(num_epochs):
 
             img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
             writer.add_image('Real Images', img_grid)
-    print((start-time.time())//60,'minutes elapsed this epoch')
-    GAN.save_checkpoint('checkpoints',epoch,f'epoch{epoch}_model.pt')
+    print((start_time-time.time())//60,'minutes elapsed this epoch')
+    GAN.save_checkpoint(model_save_folder,epoch,f'epoch{epoch}_model.pt')
 
 
 

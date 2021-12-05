@@ -242,7 +242,7 @@ class DCGAN():
             self.scalerD.step(self.optimizerD)
             self.scalerD.update()
 
-            errD = errD_real.item() + errD_fake.item()
+            errD = errD_real.detach() + errD_fake.detach()
 
         else:
             output = self.discriminator(real_images).view(-1)
@@ -257,7 +257,7 @@ class DCGAN():
 
             self.optimizerD.step()
 
-            errD = errD_real.item() + errD_fake.item()
+            errD = errD_real.detach() + errD_fake.detach()
         #self.fake = fake_images
         self.iters +=1 #We only increment iteration number on training of Discriminator
         return errD
@@ -298,5 +298,5 @@ class DCGAN():
             errG.backward()
             self.optimizerG.step()
         
-        return errG
+        return errG.detach()
 
