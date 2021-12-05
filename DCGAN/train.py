@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch, os, argparse, torchvision, torch.utils.data
 import torch.nn as nn
 import torch.nn.parallel
@@ -10,22 +11,25 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from model.py import DCGAN
+from model import DCGAN
 from torch.utils.tensorboard import SummaryWriter
+from torchsummary import summary
 #TODO Add argparsing
 #TODO add inception calculations stuff
 
 
 num_gpu = 1
-num_features = 128
+num_workers = 4
+image_size = 128
+num_features = image_size
 n_convolution_blocks = 4
 batch_size = 128
-
-num_epochs = 20
+latent_vector_size =128
+num_epochs = 1
 
 log_folder = 'logs/'
-IMAGE_PATH1 = '/input/flickrfaceshq-dataset-nvidia-resized-256px'
-IMAGE_PATH2 = 'celeba-dataset/img_align_celeba/'
+IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
+IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 
 epoch = 0
 
@@ -47,15 +51,17 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                            ]))
 
 
-GAN=DCGAN(num_gpu, num_features, n_convolution_blocks)
-
+GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size)
+print(GAN.generator)
+print(summary(GAN.generator, (latent_vector_size,1,1)))
+print(summary(GAN.discriminator,(3,64,64) ))
 device = GAN.device
-dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=workers)
+dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 writer = SummaryWriter(log_folder)
 
-fixed_noise = torch.randn(64, nz, 1, 1, device=device) #fixed noise for plotting
-
+fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
+print("Starting Training Loop...")
 for epoch in range(num_epochs):
     #Per batch
     for i, data in enumerate(dataloader, 0):

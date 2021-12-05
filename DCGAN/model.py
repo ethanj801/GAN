@@ -32,7 +32,7 @@ class Generator(nn.Module):
                     GaussianNoise()] 
         
         for i in range(n_convolution_blocks):
-            modules+=ConvolutionBlock(input_layer_size,input_layer_size//2)
+            modules+=self.ConvolutionBlock(input_layer_size,input_layer_size//2)
             input_layer_size//=2
 
 
@@ -131,12 +131,12 @@ class DCGAN():
         """
         self.num_gpu = num_gpu
         self.num_features = num_features
-        self.real_label =real_label_value
+        self.real_label_value =real_label_value
         self.fake_label_value = fake_label_value
         self.latent_vector_size=latent_vector_size
         self.amp = AMP
         
-        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.num_gpu > 0) else "cpu")
         self.iters = 0 #number of discriminator training iterations
 
         #Set up models. 
@@ -145,16 +145,16 @@ class DCGAN():
             self.scalerG = torch.cuda.amp.GradScaler()
             self.criterion = nn.BCEWithLogitsLoss()
 
-            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_block,sigmoid=False).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128)
+            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=False).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
 
         else:
             self.scalerD = None
             self.scalerG = None
             self.criterion =nn.BCELoss()
 
-            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_block,sigmoid=True).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128)
+            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=True).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
 
 
         #Multi GPU compatibility -- untested as of Dec 4 2021
@@ -180,7 +180,7 @@ class DCGAN():
             'optimizer_state_dict_G': self.optimizerG.state_dict(),
             'model_state_dict_D': self.Discriminator.state_dict(),
             'optimizer_state_dict_D': self.optimizerD.state_dict(),
-            'iters': iters
+            'iters': iters,
             'amp': False #changed below if amp is enabled
             }
         if self.amp:
@@ -196,7 +196,7 @@ class DCGAN():
 
         self.generator.load_state_dict(checkpoint['model_state_dict_G'])
         self.optimizerG.load_state_dict(checkpoint['optimizer_state_dict_G'])
-        self.Discriminator.load_state_dict(checkpoint['model_state_dict_D'])
+        self.discriminator.load_state_dict(checkpoint['model_state_dict_D'])
         self.optimizerD.load_state_dict(checkpoint['optimizer_state_dict_D'])
         
         self.amp = checkpoint['amp']
@@ -211,7 +211,7 @@ class DCGAN():
 
     def generate_fake_images(self,batch_size):
         """Generates a batch of fake images."""
-        noise = torch.randn(batch_size, self.num_features, 1, 1, device=self.device)
+        noise = torch.randn(batch_size, self.latent_vector_size, 1, 1, device=self.device)
         return self.generator(noise)
 
     def train_discriminator(self,images):
@@ -235,7 +235,7 @@ class DCGAN():
             fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
             
             with torch.cuda.amp.autocast():
-                output = self.discriminator(fake_images.view(-1))
+                output = self.discriminator(fake_images).view(-1)
                 errD_fake = self.criterion(output, label)
             
             self.scalerD.scale(errD_fake).backward()
@@ -251,8 +251,7 @@ class DCGAN():
 
             label = torch.full((batch_size,), self.fake_label_value, dtype=torch.float, device=self.device)
             fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
-
-            output = self.discriminator(fake_images.view(-1))
+            output = self.discriminator(fake_images).view(-1)
             errD_fake = self.criterion(output, label)
 
             self.optimizerD.step()
@@ -272,7 +271,7 @@ class DCGAN():
 
         #using 1.0 here instead of the real label value. 
         #TODO: Test the relative performance of this
-        label_value = 1.0 
+        label_value = self.real_label_value 
 
         #Generating label vector
         #QUESTION: Will it provide meaningful performance upgrades if I keep the I be keeping this variable on device?
@@ -282,7 +281,7 @@ class DCGAN():
         #Maximize log(D(G(z)))
         if self.amp:
             with torch.cuda.amp.autocast():
-                output = self.discriminator(fake).view(-1)
+                output = self.discriminator(fake_images).view(-1)
                 errG = self.criterion(output, label)
             
             # Calculate gradients for G
@@ -293,9 +292,10 @@ class DCGAN():
             self.scalerG.update()
 
         else:   
-            output = self.discriminator(fake).view(-1)
+            output = self.discriminator(fake_images).view(-1)
             errG = self.criterion(output, label)
             errG.backward()
             self.optimizerG.step()
         
         return errG
+
