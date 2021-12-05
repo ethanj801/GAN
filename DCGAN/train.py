@@ -1,5 +1,5 @@
 from __future__ import print_function
-import torch, os, argparse, torchvision, torch.utils.data
+import torch, os, argparse, torchvision, torch.utils.data, time
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
@@ -65,6 +65,7 @@ fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed no
 print("Starting Training Loop...")
 for epoch in range(num_epochs):
     #Per batch
+    start = time.time()
     for i, data in enumerate(dataloader, 0):
         images = data[0]
         errD = GAN.train_discriminator(images)
@@ -86,7 +87,7 @@ for epoch in range(num_epochs):
 
             img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
             writer.add_image('Real Images', img_grid)
-
+    print(start-time.time()//60,'minutes elapsed this epoch')
     GAN.save_checkpoint('checkpoints',epoch,f'epoch{epoch}_model.pt')
 
 
