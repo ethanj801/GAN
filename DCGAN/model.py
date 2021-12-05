@@ -253,6 +253,7 @@ class DCGAN():
             fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
             output = self.discriminator(fake_images).view(-1)
             errD_fake = self.criterion(output, label)
+            errD_fake.backward()
 
             self.optimizerD.step()
 
