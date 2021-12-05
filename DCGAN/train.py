@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 #TODO Add argparsing
 #TODO add inception calculations stuff
+torch.backends.cudnn.benchmark = True
 
 
 num_gpu = 1
@@ -27,7 +28,7 @@ batch_size = 128
 latent_vector_size =128
 num_epochs = 1
 
-log_folder = 'logs/'
+
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 
@@ -58,7 +59,7 @@ print(summary(GAN.discriminator,(3,64,64) ))
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-writer = SummaryWriter(log_folder)
+writer = SummaryWriter()
 
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")

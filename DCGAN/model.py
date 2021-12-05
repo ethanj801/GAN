@@ -216,7 +216,7 @@ class DCGAN():
 
     def train_discriminator(self,images):
         """Trains discriminator on a single batch of images returns discriminator loss."""
-        self.discriminator.zero_grad()
+        self.discriminator.zero_grad(set_to_none=True)
 
         real_images = images.to(self.device)
         batch_size = real_images.size(0)
@@ -250,21 +250,21 @@ class DCGAN():
             errD_real.backward()
 
             label = torch.full((batch_size,), self.fake_label_value, dtype=torch.float, device=self.device)
-            fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
-            output = self.discriminator(fake_images).view(-1)
+            fake_images = self.generate_fake_images(batch_size)#.detach() #gradient not needed for generator here, hence detach
+            output = self.discriminator(fake_images.detach()).view(-1)
             errD_fake = self.criterion(output, label)
             errD_fake.backward()
 
             self.optimizerD.step()
 
             errD = errD_real.item() + errD_fake.item()
-
+        #self.fake = fake_images
         self.iters +=1 #We only increment iteration number on training of Discriminator
         return errD
             
     def train_generator(self,batch_size):
         """Trains generator on a single batch and returns generator loss."""
-        self.generator.zero_grad()
+        self.generator.zero_grad(set_to_none=True)
 
         #Generate fake images
         noise = torch.randn(batch_size, self.num_features, 1, 1, device=self.device)
@@ -272,7 +272,7 @@ class DCGAN():
 
         #using 1.0 here instead of the real label value. 
         #TODO: Test the relative performance of this
-        label_value = self.real_label_value 
+        label_value = 1.0#self.real_label_value 
 
         #Generating label vector
         #QUESTION: Will it provide meaningful performance upgrades if I keep the I be keeping this variable on device?
