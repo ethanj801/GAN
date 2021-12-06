@@ -25,10 +25,11 @@ num_workers = 4
 image_size = 128
 num_features = image_size
 n_convolution_blocks = 4
-batch_size = 128
+batch_size = 32
 latent_vector_size =128
+real_label_value = 1.0
 num_epochs = 30
-model_load_path = None
+model_load_path = '/home/ej74/checkpoints/epoch29_model.pt'
 model_save_folder = 'checkpoints'
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
@@ -56,14 +57,14 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                            ]))
 
 
-GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
+GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp,real_label_value=real_label_value)
 print(GAN.generator)
 print(summary(GAN.generator, (latent_vector_size,1,1)))
 print(summary(GAN.discriminator,(3,64,64) ))
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
-if model_load_folder is not None:
+if model_load_path is not None:
     total_epoch = GAN.load_checkpoint(model_load_path)
     #override amp from model load
     if amp:

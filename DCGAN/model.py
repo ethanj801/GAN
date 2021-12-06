@@ -189,7 +189,7 @@ class DCGAN():
 
         torch.save(out,os.path.join(directory,model_name))
 
-    def load_checkpoint(path):
+    def load_checkpoint(self,path):
         """Loads a model checkpoint, returns saved epoch."""
         checkpoint=torch.load(path)
 

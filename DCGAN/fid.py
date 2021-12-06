@@ -3,12 +3,13 @@ import torch, os, argparse, torchvision, torch.utils.data, time
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import tqdm
+from tqdm import tqdm
 import torch.optim as optim
 from pytorch_fid import fid_score
+from pytorch_fid.inception import InceptionV3
 from model import DCGAN
 
-def compute_fid(path_to_scores,GAN,batch_size=128):
+def compute_fid(path_to_scores,GAN,device,batch_size=128):
     dims = 2048
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
     model = InceptionV3([block_idx]).to(device)
@@ -40,7 +41,7 @@ def compute_fid(path_to_scores,GAN,batch_size=128):
 
     return fid_score.calculate_frechet_distance(mu1,s1,mu2,s2)
 
-def compute_fid_from_model_save(path_to_scores, path_to_model):
+def compute_fid_from_model_save(path_to_scores, path_to_model,batch_size=128):
     GAN=DCGAN(1, 128, 4,latent_vector_size=128)
     GAN.load_checkpoint(path_to_model)
-    return compute_fid(path_to_scores,GAN)
+    return compute_fid(path_to_scores,GAN,GAN.device,batch_size=batch_size)
