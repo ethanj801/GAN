@@ -1,4 +1,10 @@
+import torch, os, torchvision
+import torch.nn as nn
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.optim as optim
 from models import Discriminator, Generator
+from utilities import weights_init
 
 class DCGAN():
     """Complete DCGAN model.
@@ -41,7 +47,7 @@ class DCGAN():
             self.criterion = nn.BCEWithLogitsLoss()
 
             self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=False).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = latent_vector_size).to(self.device)
 
         else:
             self.scalerD = None
@@ -49,7 +55,7 @@ class DCGAN():
             self.criterion =nn.BCELoss()
 
             self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=True).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = latent_vector_size).to(self.device)
 
 
         #Multi GPU compatibility -- untested as of Dec 4 2021

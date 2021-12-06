@@ -1,4 +1,11 @@
+import torch, os, torchvision
+import torch.nn as nn
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.optim as optim
 from models import Discriminator, Generator
+from utilities import weights_init, requires_grad
+from torch.nn import functional as F
 class WGAN():
     """Complete WGAN model.
     
@@ -6,7 +13,7 @@ class WGAN():
 
     """
 
-    def __init__(self,num_gpu, num_features, n_convolution_blocks,lr = 0.0002,
+    def __init__(self,num_gpu, num_features, n_convolution_blocks,lr = 0.00005,
                  latent_vector_size=128, AMP = False):
         """Constructor for DCGAN Class.
         
@@ -24,7 +31,6 @@ class WGAN():
         self.num_features = num_features
         self.latent_vector_size=latent_vector_size
         self.amp = AMP
-
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.num_gpu > 0) else "cpu")
         self.iters = 0 #number of discriminator training iterations
 
@@ -32,18 +38,16 @@ class WGAN():
         if self.amp:
             self.scalerD = torch.cuda.amp.GradScaler()
             self.scalerG = torch.cuda.amp.GradScaler()
-            self.criterion = nn.BCEWithLogitsLoss()
 
             self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=False).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = latent_vector_size).to(self.device)
 
         else:
             self.scalerD = None
             self.scalerG = None
-            self.criterion =nn.BCELoss()
 
-            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=True).to(self.device)
-            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = 128).to(self.device)
+            self.discriminator =Discriminator(self.num_gpu, num_features, n_convolution_blocks,sigmoid=False).to(self.device)
+            self.generator = Generator(self.num_gpu, num_features, n_convolution_blocks,latent_vector_size = latent_vector_size).to(self.device)
 
 
         #Multi GPU compatibility -- untested as of Dec 4 2021
@@ -55,9 +59,15 @@ class WGAN():
         self.discriminator.apply(weights_init)
         self.generator.apply(weights_init)
 
-        #Set up optimizers 
-        self.optimizerD = optim.Adam(self.discriminator.parameters(), lr=lr, betas=(beta1, 0.999))
-        self.optimizerG = optim.Adam(self.generator.parameters(), lr=lr, betas=(beta1, 0.999))
+        #Use RMS prop optimizers as outlined in paper
+        self.optimizerD = optim.RMSprop(self.discriminator.parameters(), lr=lr)
+        self.optimizerG = optim.RMSprop(self.generator.parameters(), lr=lr)
+    
+    def clip_parameters(self,model):
+        """Model weight clipping as per original WGAN paper"""
+        for p in model.parameters():
+            p.data.clamp_(-0.01, 0.01) 
+
 
     def save_checkpoint(self,directory,epoch = None,model_name = 'model.pt'):
         """Saves a model checkpoint."""
@@ -111,43 +121,43 @@ class WGAN():
         batch_size = real_images.size(0)
         
 
-        #Maximize log(D(x)) + log(1 - D(G(z)))
-        label = torch.full((batch_size,), self.real_label_value, dtype=torch.float, device=self.device)
+        #TODO Consider whether things should be inside or outside of AMP. 
+
+        #Maximize D(x) - D(G(z))
+        #Using softplus since I assume we want strictly positive values before the averaging operation? Probably doesn't matter
         if self.amp:
             with torch.cuda.amp.autocast():
-                output = self.discriminator(real_images).view(-1)
-                errD_real = self.criterion(output, label)  
+                D_x = F.softplus(self.discriminator(real_images).view(-1)).mean()  #real loss unsure if I should just put the negative inside the softplus?
 
-            self.scalerD.scale(errD_real).backward()
+                fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
+                D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
+                loss_d=-(D_x - D_g_z)
+
+            self.scalerD.scale(loss_d).backward()
             
-            label = torch.full((batch_size,), self.fake_label_value, dtype=torch.float, device=self.device)
-            fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
-            
-            with torch.cuda.amp.autocast():
-                output = self.discriminator(fake_images).view(-1)
-                errD_fake = self.criterion(output, label)
-            
-            self.scalerD.scale(errD_fake).backward()
             self.scalerD.step(self.optimizerD)
             self.scalerD.update()
 
-            errD = errD_real.detach() + errD_fake.detach()
+            
 
         else:
-            output = self.discriminator(real_images).view(-1)
-            errD_real = self.criterion(output, label)  
-            errD_real.backward()
+            D_x = F.softplus(self.discriminator(real_images).view(-1)).mean() 
 
-            label = torch.full((batch_size,), self.fake_label_value, dtype=torch.float, device=self.device)
-            fake_images = self.generate_fake_images(batch_size)#.detach() #gradient not needed for generator here, hence detach
-            output = self.discriminator(fake_images.detach()).view(-1)
-            errD_fake = self.criterion(output, label)
-            errD_fake.backward()
+
+           
+            fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
+            D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean()
+            
+
+            oss_d=-(D_x - D_g_z)
 
             self.optimizerD.step()
 
             errD = errD_real.detach() + errD_fake.detach()
-        #self.fake = fake_images
+        
+        loss_d = loss_d.detach()
+        D_x, D_g_z = D_x.detach(), D_g_z.detach()
+
         self.iters +=1 #We only increment iteration number on training of Discriminator
         return errD
             
