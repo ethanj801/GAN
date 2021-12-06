@@ -112,7 +112,7 @@ for epoch in range(num_epochs):
             img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
             writer.add_image('Real Images', img_grid)
     
-    print((start_time-time.time())//60,'minutes elapsed this epoch')
+    print((time.time()-start_time)//60,'minutes elapsed this epoch')
 
     start_time = time.time()
     GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')

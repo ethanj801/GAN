@@ -63,11 +63,6 @@ class WGAN():
         self.optimizerD = optim.RMSprop(self.discriminator.parameters(), lr=lr)
         self.optimizerG = optim.RMSprop(self.generator.parameters(), lr=lr)
     
-    def clip_parameters(self,model):
-        """Model weight clipping as per original WGAN paper"""
-        for p in model.parameters():
-            p.data.clamp_(-0.01, 0.01) 
-
 
     def save_checkpoint(self,directory,epoch = None,model_name = 'model.pt'):
         """Saves a model checkpoint."""
@@ -117,6 +112,14 @@ class WGAN():
         """Trains discriminator on a single batch of images returns discriminator loss."""
         self.discriminator.zero_grad(set_to_none=True)
 
+        requires_grad(self.generator,False)
+        requires_grad(self.discriminator,True)
+
+
+        #clamp parameters as per original WGAN paper
+        for p in self.discriminator.parameters():
+            p.data.clamp_(-0.01, 0.01) 
+
         real_images = images.to(self.device)
         batch_size = real_images.size(0)
         
@@ -127,9 +130,9 @@ class WGAN():
         #Using softplus since I assume we want strictly positive values before the averaging operation? Probably doesn't matter
         if self.amp:
             with torch.cuda.amp.autocast():
-                D_x = F.softplus(self.discriminator(real_images).view(-1)).mean()  #real loss unsure if I should just put the negative inside the softplus?
+                D_x = F.softplus(self.discriminator(real_images).view(-1)).mean()  #real loss. unsure if I should just put the negative inside the softplus?
 
-                fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
+                fake_images = self.generate_fake_images(batch_size)#.detach() #.detach() don't think i need this detach anymore due to settting requires grad
                 D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
                 loss_d=-(D_x - D_g_z)
 
@@ -138,64 +141,49 @@ class WGAN():
             self.scalerD.step(self.optimizerD)
             self.scalerD.update()
 
-            
-
         else:
-            D_x = F.softplus(self.discriminator(real_images).view(-1)).mean() 
+            D_x = F.softplus(self.discriminator(real_images).view(-1)).mean() #real loss
 
+            fake_images = self.generate_fake_images(batch_size)#.detach() don't think i need this detach anymore due to settting requires grad
+            D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
+            loss_d=-(D_x - D_g_z)
 
-           
-            fake_images = self.generate_fake_images(batch_size).detach() #gradient not needed for generator here, hence detach
-            D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean()
-            
-
-            oss_d=-(D_x - D_g_z)
-
+            loss_d.backward()
             self.optimizerD.step()
-
-            errD = errD_real.detach() + errD_fake.detach()
         
         loss_d = loss_d.detach()
         D_x, D_g_z = D_x.detach(), D_g_z.detach()
 
         self.iters +=1 #We only increment iteration number on training of Discriminator
-        return errD
+        return loss_d, D_x, D_g_z
             
     def train_generator(self,batch_size):
         """Trains generator on a single batch and returns generator loss."""
         self.generator.zero_grad(set_to_none=True)
 
+        requires_grad(self.generator,True)
+        requires_grad(self.discriminator,False)
+
         #Generate fake images
         noise = torch.randn(batch_size, self.num_features, 1, 1, device=self.device)
         fake_images = self.generate_fake_images(batch_size)
 
-        #using 1.0 here instead of the real label value. 
-        #TODO: Test the relative performance of this
-        label_value = 1.0#self.real_label_value 
-
-        #Generating label vector
-        #QUESTION: Will it provide meaningful performance upgrades if I keep the I be keeping this variable on device?
-        #Downside would be that batch_size wouldn't be as easy to adjust on the fly. I assume it is negligible? 
-        label = torch.full((batch_size,), label_value, dtype=torch.float, device=self.device)
-
-        #Maximize log(D(G(z)))
+        #Maximize D(G(z))
         if self.amp:
             with torch.cuda.amp.autocast():
-                output = self.discriminator(fake_images).view(-1)
-                errG = self.criterion(output, label)
+                loss_g = -F.softplus(self.discriminator(fake_images).view(-1)).mean() #negative inside softplus?
             
             # Calculate gradients for G
-            self.scalerG.scale(errG).backward()
+            self.scalerG.scale(loss_g).backward()
 
             # Update G
             self.scalerG.step(self.optimizerG)
             self.scalerG.update()
 
         else:   
-            output = self.discriminator(fake_images).view(-1)
-            errG = self.criterion(output, label)
-            errG.backward()
+            loss_g = -F.softplus(self.discriminator(fake_images).view(-1)).mean()
+            
+            loss_g.backward()
             self.optimizerG.step()
         
-        return errG.detach()
-
+        return loss_g

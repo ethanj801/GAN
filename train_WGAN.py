@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from DCGAN import DCGAN
+from WGAN import WGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from pytorch_fid import fid_score
@@ -19,18 +19,19 @@ from pytorch_fid import fid_score
 #TODO add inception calculations stuff
 torch.backends.cudnn.benchmark = True
 
+image_iteration = 100 #after how many batches should an image samples be generated
+
 amp = True
 num_gpu = 1
 num_workers = 4
 image_size = 128
 num_features = image_size
 n_convolution_blocks = 4
-batch_size = 32
+batch_size = 64
 latent_vector_size =128
-real_label_value = 1.0
 num_epochs = 30
-model_load_path = '/home/ej74/checkpoints/epoch29_model.pt'
-model_save_folder = 'checkpoints'
+model_load_path = None
+model_save_folder = 'checkpoints-WGAN'
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 epoch = 0
@@ -57,10 +58,8 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                            ]))
 
 
-GAN=DCGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp,real_label_value=real_label_value)
-print(GAN.generator)
-print(summary(GAN.generator, (latent_vector_size,1,1)))
-print(summary(GAN.discriminator,(3,64,64) ))
+GAN=WGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
+
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
@@ -85,25 +84,21 @@ for epoch in range(num_epochs):
     errG = 0
     for i, data in enumerate(dataloader, 0):
         images = data[0]
-        errD+= GAN.train_discriminator(images)
-        errG+= GAN.train_generator(batch_size)
+        loss_d, D_x, D_g_z= GAN.train_discriminator(images)
+        loss_g = GAN.train_generator(batch_size)
 	
-        #writer.add_scalar('Generator Loss',errG,GAN.iters)
-        #writer.add_scalar('Discriminator Loss',errD,GAN.iters)
+        writer.add_scalar('Generator Loss',loss_g,GAN.iters)
+        writer.add_scalar('Discriminator Loss',loss_d,GAN.iters)
+        writer.add_scalar('Critic Real Score',D_x,GAN.iters)
+        writer.add_scalar('Critic Fake Score',D_g_z,GAN.iters)
 
         if i % 50 == 0:
-            if i!=0:
-                errD/=50
-                errG/=50
-            writer.add_scalar('Generator Loss',errG,GAN.iters)
-            writer.add_scalar('Discriminator Loss',errD,GAN.iters)
-            print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
+
+            print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tCritic Real: %.4f\tCritic Fake %.4f'
                   % (epoch, num_epochs, i, len(dataloader),
-                     errD, errG))
+                     loss_d, loss_g, D_x, D_g_z))
            
-            errD = 0
-            errG = 0
-        if GAN.iters % 500 == 0 or (epoch == num_epochs-1 and i == len(dataloader)-1):
+        if GAN.iters % image_iteration == 0 or (epoch == num_epochs-1 and i == len(dataloader)-1):
             with torch.no_grad():
                 fake_images=GAN.generator(fixed_noise).detach().cpu()
             img_grid=vutils.make_grid(fake_images, padding=2, normalize=True)
@@ -112,11 +107,11 @@ for epoch in range(num_epochs):
             img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
             writer.add_image('Real Images', img_grid)
     
-    print((start_time-time.time())//60,'minutes elapsed this epoch')
+    print((time.time()-start_time)//60,'minutes elapsed this epoch')
 
-    start_time = time.time()
+    
     GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
-    print(f'Save time took: {start_time-time.time()} seconds ')
+    
 
 
 
