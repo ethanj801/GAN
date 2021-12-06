@@ -1,3 +1,6 @@
+##add pretraining of critic (modifiable)
+##implement argv
+## add summary namer
 from __future__ import print_function
 import torch, os, argparse, torchvision, torch.utils.data, time
 import torch.nn as nn

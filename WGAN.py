@@ -1,3 +1,9 @@
+
+#TODO rename discriminator to critic
+#Make softplus consistent
+#Fix score code if using softplus
+
+
 import torch, os, torchvision
 import torch.nn as nn
 import torch.nn.parallel
@@ -130,11 +136,12 @@ class WGAN():
         #Using softplus since I assume we want strictly positive values before the averaging operation? Probably doesn't matter
         if self.amp:
             with torch.cuda.amp.autocast():
-                D_x = F.softplus(self.discriminator(real_images).view(-1)).mean()  #real loss. unsure if I should just put the negative inside the softplus?
+                D_x = F.softplus(-self.discriminator(real_images).view(-1)).mean()  #real loss. unsure if I should just put the negative inside the softplus?
 
                 fake_images = self.generate_fake_images(batch_size)#.detach() #.detach() don't think i need this detach anymore due to settting requires grad
                 D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
-                loss_d=-(D_x - D_g_z)
+                #loss_d=-(D_x - D_g_z)
+                loss_d = (D_x+D_g_z)
 
             self.scalerD.scale(loss_d).backward()
             
@@ -171,7 +178,7 @@ class WGAN():
         #Maximize D(G(z))
         if self.amp:
             with torch.cuda.amp.autocast():
-                loss_g = -F.softplus(self.discriminator(fake_images).view(-1)).mean() #negative inside softplus?
+                loss_g = F.softplus(-self.discriminator(fake_images).view(-1)).mean() #negative inside softplus?
             
             # Calculate gradients for G
             self.scalerG.scale(loss_g).backward()

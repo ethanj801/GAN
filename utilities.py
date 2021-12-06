@@ -1,4 +1,7 @@
 import torch.nn as nn
+def requires_grad(model, flag=True):
+    for p in model.parameters():
+        p.requires_grad = flag
 def weights_init(m):
     """Initialize model weights to a normal distribution with mean=0, stdev=0.02."""
     classname = m.__class__.__name__
