@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from model import DCGAN
+from DCGAN import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from pytorch_fid import fid_score
