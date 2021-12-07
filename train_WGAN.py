@@ -100,7 +100,7 @@ for epoch in range(num_epochs):
 
             print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tCritic Real: %.4f\tCritic Fake %.4f'
                   % (epoch, num_epochs, i, len(dataloader),
-                     loss_d, loss_g, D_x, D_g_z))
+                     loss_d, loss_g, critic_score_real, critic_score_fake))
            
         if GAN.iters % image_iteration == 0 or (epoch == num_epochs-1 and i == len(dataloader)-1):
             with torch.no_grad():

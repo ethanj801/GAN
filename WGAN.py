@@ -160,9 +160,9 @@ class WGAN():
             self.optimizerD.step()
         
         loss_d = loss_d.detach()
-        critic_score_real = critic_score_real.mean().detach(), 
+        critic_score_real = critic_score_real.mean().detach() 
         critic_score_fake =critic_score_fake.mean().detach()
-
+        
         self.iters +=1 #We only increment iteration number on training of Discriminator
         return loss_d, critic_score_real, critic_score_fake
             
