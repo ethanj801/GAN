@@ -1,9 +1,3 @@
-
-#TODO rename discriminator to critic
-#Make softplus consistent
-#Fix score code if using softplus
-
-
 import torch, os, torchvision
 import torch.nn as nn
 import torch.nn.parallel
@@ -133,36 +127,44 @@ class WGAN():
         #TODO Consider whether things should be inside or outside of AMP. 
 
         #Maximize D(x) - D(G(z))
-        #Using softplus since I assume we want strictly positive values before the averaging operation? Probably doesn't matter
+        #Using softplus since I assume we want strictly positive values before the averaging operation? Probably doesn't matter. 
+        #
         if self.amp:
             with torch.cuda.amp.autocast():
-                D_x = F.softplus(-self.discriminator(real_images).view(-1)).mean()  #real loss. unsure if I should just put the negative inside the softplus?
+                critic_score_real=self.discriminator(real_images).view(-1)
+                real_loss = F.softplus(-critic_score_real).mean() 
+                
 
                 fake_images = self.generate_fake_images(batch_size)#.detach() #.detach() don't think i need this detach anymore due to settting requires grad
-                D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
-                #loss_d=-(D_x - D_g_z)
-                loss_d = (D_x+D_g_z)
+                critic_score_fake = self.discriminator(fake_images).view(-1)
+                fake_loss = F.softplus(critic_score_fake).mean()
 
+                loss_d = real_loss+fake_loss
+                
             self.scalerD.scale(loss_d).backward()
-            
+
             self.scalerD.step(self.optimizerD)
             self.scalerD.update()
 
         else:
-            D_x = F.softplus(self.discriminator(real_images).view(-1)).mean() #real loss
+            critic_score_real=self.discriminator(real_images).view(-1)
+            real_loss = F.softplus(-critic_score_real).mean() 
 
-            fake_images = self.generate_fake_images(batch_size)#.detach() don't think i need this detach anymore due to settting requires grad
-            D_g_z = F.softplus(self.discriminator(fake_images).view(-1)).mean() #fake loss
-            loss_d=-(D_x - D_g_z)
+            fake_images = self.generate_fake_images(batch_size)#.detach() #.detach() don't think i need this detach anymore due to settting requires grad
+            ritic_score_fake = self.discriminator(fake_images).view(-1)
+            fake_loss = F.softplus(critic_score_fake).mean()
+
+            loss_d = real_loss+fake_loss
 
             loss_d.backward()
             self.optimizerD.step()
         
         loss_d = loss_d.detach()
-        D_x, D_g_z = D_x.detach(), D_g_z.detach()
+        critic_score_real = critic_score_real.mean().detach(), 
+        critic_score_fake =critic_score_fake.mean().detach()
 
         self.iters +=1 #We only increment iteration number on training of Discriminator
-        return loss_d, D_x, D_g_z
+        return loss_d, critic_score_real, critic_score_fake
             
     def train_generator(self,batch_size):
         """Trains generator on a single batch and returns generator loss."""
@@ -178,7 +180,7 @@ class WGAN():
         #Maximize D(G(z))
         if self.amp:
             with torch.cuda.amp.autocast():
-                loss_g = F.softplus(-self.discriminator(fake_images).view(-1)).mean() #negative inside softplus?
+                loss_g = F.softplus(-self.discriminator(fake_images).view(-1)).mean()
             
             # Calculate gradients for G
             self.scalerG.scale(loss_g).backward()
@@ -188,7 +190,7 @@ class WGAN():
             self.scalerG.update()
 
         else:   
-            loss_g = -F.softplus(self.discriminator(fake_images).view(-1)).mean()
+            loss_g = F.softplus(-self.discriminator(fake_images).view(-1)).mean()
             
             loss_g.backward()
             self.optimizerG.step()

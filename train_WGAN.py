@@ -1,6 +1,6 @@
 ##add pretraining of critic (modifiable)
 ##implement argv
-## add summary namer
+##add data augmenting (mirroring) [noise??]
 from __future__ import print_function
 import torch, os, argparse, torchvision, torch.utils.data, time
 import torch.nn as nn
@@ -22,7 +22,7 @@ from pytorch_fid import fid_score
 #TODO add inception calculations stuff
 torch.backends.cudnn.benchmark = True
 
-image_iteration = 250 #after how many batches should an image samples be generated
+image_iteration = 2000 #after how many batches should an image samples be generated
 generator_training_interval = 1 #train generator 5x less than critic
 amp = True
 num_gpu = 1
@@ -32,9 +32,10 @@ num_features = image_size
 n_convolution_blocks = 4
 batch_size = 64
 latent_vector_size =128
-num_epochs = 5
+num_epochs = 30
 model_load_path = None
 model_save_folder = 'checkpoints-WGAN'
+checkpoint_save_frequency = 3
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 epoch = 0
@@ -76,7 +77,7 @@ else:
     total_epoch = 0 
 
 
-writer = SummaryWriter(comment='inside_1xratio')
+writer = SummaryWriter()
 
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")
@@ -86,14 +87,14 @@ for epoch in range(num_epochs):
     
     for i, data in enumerate(dataloader, 0):
         images = data[0]
-        loss_d, D_x, D_g_z= GAN.train_discriminator(images)
+        loss_d, critic_score_real, critic_score_fake = GAN.train_discriminator(images)
         if i%generator_training_interval==0:
             loss_g = GAN.train_generator(batch_size)
             writer.add_scalar('Generator Loss',loss_g,GAN.iters)
 
         writer.add_scalar('Discriminator Loss',loss_d,GAN.iters)
-        writer.add_scalar('Critic Real Score',D_x,GAN.iters)
-        writer.add_scalar('Critic Fake Score',D_g_z,GAN.iters)
+        writer.add_scalar('Critic Real Score',critic_score_real,GAN.iters)
+        writer.add_scalar('Critic Fake Score',critic_score_fake,GAN.iters)
 
         if i % 50 == 0:
 
@@ -112,8 +113,8 @@ for epoch in range(num_epochs):
     
     print((time.time()-start_time)//60,'minutes elapsed this epoch')
 
-    
-    GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+    if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
+        GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
     
 
 
