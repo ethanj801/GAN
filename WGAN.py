@@ -151,7 +151,7 @@ class WGAN():
             real_loss = F.softplus(-critic_score_real).mean() 
 
             fake_images = self.generate_fake_images(batch_size)#.detach() #.detach() don't think i need this detach anymore due to settting requires grad
-            ritic_score_fake = self.discriminator(fake_images).view(-1)
+            critic_score_fake = self.discriminator(fake_images).view(-1)
             fake_loss = F.softplus(critic_score_fake).mean()
 
             loss_d = real_loss+fake_loss
