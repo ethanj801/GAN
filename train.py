@@ -36,6 +36,7 @@ parser.add_argument('image_iteration',type =int,default=500,help='After how many
 parser.add_argument('precomputed_inception_score_path',type =str,default="home/ej74/128px.nz",help='Path to precomputed inception scores')
 parser.add_argument('nz',type =int,default=256,help='Latent vector size')
 parser.add_argument('model_type',type =str,default='DCGAN',help='Model to use')
+parser.add_argument('tensorboard_folder',type = str, default ='runs/')
 args=parser.parse_args()
 
 model_choices = {'DCGAN':DCGAN,'WGAN':WGAN}
@@ -100,7 +101,7 @@ else:
     total_epoch = 0 
 
 
-writer = SummaryWriter()
+writer = SummaryWriter(parser.tensorboard_folder)
 
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")
