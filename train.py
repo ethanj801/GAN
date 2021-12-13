@@ -90,7 +90,7 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
 GAN=model_choices[args.model_type](num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
 
 device = GAN.device
-dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
+dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers,drop_last=True)
 
 if model_load_path is not None:
     total_epoch = GAN.load_checkpoint(model_load_path)
