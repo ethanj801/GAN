@@ -45,20 +45,20 @@ if args.model_type not in model_choices:
 
 torch.backends.cudnn.benchmark = True
 scratch_directory = '/n/scratch3/users/e/ej74'
-image_iteration = parser.image_iteration 
+image_iteration = args.image_iteration 
 generator_training_interval = args.generator_training_interval
 amp = args.amp
-num_gpu = parser.gpu
-num_workers = parser.workers
-image_size = parser.image_size
+num_gpu = args.gpu
+num_workers = args.workers
+image_size = args.image_size
 num_features = image_size
 n_convolution_blocks = math.log2(image_size)-2
-batch_size = parser.batch_size
-latent_vector_size =parser.nz
-num_epochs = parser.epochs
-model_load_path = parser.model_load_path
-model_save_folder = parser.model_save_path
-checkpoint_save_frequency = parser.checkpoint_save_frequency
+batch_size = args.batch_size
+latent_vector_size =args.nz
+num_epochs = args.epochs
+model_load_path = args.model_load_path
+model_save_folder = args.model_save_path
+checkpoint_save_frequency = args.checkpoint_save_frequency
 
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
@@ -101,7 +101,7 @@ else:
     total_epoch = 0 
 
 
-writer = SummaryWriter(parser.tensorboard_folder)
+writer = SummaryWriter(args.tensorboard_folder)
 
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")
