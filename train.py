@@ -39,7 +39,7 @@ parser.add_argument('model_type',type =str,default='DCGAN',help='Model to use')
 args=parser.parse_args()
 
 model_choices = {'DCGAN':DCGAN,'WGAN':WGAN}
-if parser.model_type is not in model_choices:
+if parser.model_type not in model_choices:
     raise Exception('Invalid Model Type')
 
 torch.backends.cudnn.benchmark = True
