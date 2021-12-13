@@ -1,7 +1,7 @@
-##add pretraining of critic (modifiable)
-##implement argv
-##add data augmenting (mirroring) [noise??]
+##add pretraining of critic (modifiable) for WGAN
 from __future__ import print_function
+import argparse
+import math
 import torch, os, argparse, torchvision, torch.utils.data, time
 import torch.nn as nn
 import torch.nn.parallel
@@ -15,27 +15,50 @@ from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from WGAN import WGAN
+from DCGAN import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from pytorch_fid import fid_score
-#TODO Add argparsing
 #TODO add inception calculations stuff
-torch.backends.cudnn.benchmark = True
 
-image_iteration = 2000 #after how many batches should an image samples be generated
-generator_training_interval = 1 #train generator 5x less than critic
-amp = True
-num_gpu = 1
-num_workers = 4
-image_size = 128
+parser = argparse.ArgumentParser()
+parser.add_argument('amp',type =bool, default = True, help='Whether to use Automatic Mixed Precision')
+parser.add_argument('generator_training_interval',type =int, default = 1, help='How often to train generator with respect to critic. e.g. a value of 3 means generator is trained every 3 critic updates')
+parser.add_argument('gpu',type =int, default = 1, help='Number of GPUs to use')
+parser.add_argument('workers',type =int, default = 4, help='Number of CPU threads to use to load data')
+parser.add_argument('image_size',type =int, default = 128, help='Size of images')
+parser.add_argument('batch_size',type =int, default = 64, help='Batch size for training')
+parser.add_argument('model_load_path',type =str, default = None, help='Path to pretrained model')
+parser.add_argument('model_save_path',type =str, default = 'checkpoints', help='Path to model save folder')
+parser.add_argument('epochs',type =int, default = 30, help='Number of epochs to train for')
+parser.add_argument('checkpoint_save_frequency',type =int, default = 3, help='After how many epochs to save model')
+parser.add_argument('image_iteration',type =int,default=500,help='After how many batches should an image samples be generated')
+parser.add_argument('precomputed_inception_score_path',type =str,default="home/ej74/128px.nz",help='Path to precomputed inception scores')
+parser.add_argument('nz',type =int,default=256,help='Latent vector size')
+parser.add_argument('model_type',type =str,default='DCGAN',help='Model to use')
+args=parser.parse_args()
+
+model_choices = {'DCGAN':DCGAN,'WGAN':WGAN}
+if parser.model_type is not in model_choices:
+    raise Exception('Invalid Model Type')
+
+torch.backends.cudnn.benchmark = True
+scratch_directory = '/n/scratch3/users/e/ej74'
+image_iteration = parser.image_iteration 
+generator_training_interval = args.generator_training_interval
+amp = args.amp
+num_gpu = parser.gpu
+num_workers = parser.workers
+image_size = parser.image_size
 num_features = image_size
-n_convolution_blocks = 4
-batch_size = 64
-latent_vector_size =128
-num_epochs = 30
-model_load_path = None
-model_save_folder = 'checkpoints-WGAN'
-checkpoint_save_frequency = 3
+n_convolution_blocks = math.log2(image_size)-2
+batch_size = parser.batch_size
+latent_vector_size =parser.nz
+num_epochs = parser.epochs
+model_load_path = parser.model_load_path
+model_save_folder = parser.model_save_path
+checkpoint_save_frequency = parser.checkpoint_save_frequency
+
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 epoch = 0
@@ -51,7 +74,7 @@ dataset = dset.ImageFolder(root=IMAGE_PATH,
                                transforms.CenterCrop(image_size),
                                transforms.ToTensor(),
                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                           ]))
+                               transforms.RandomHorizontalFlip()]))
 
 dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                            transform=transforms.Compose([
@@ -59,10 +82,10 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                                transforms.CenterCrop(image_size),
                                transforms.ToTensor(),
                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                           ]))
+                               transforms.RandomHorizontalFlip()]))
 
 
-GAN=WGAN(num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
+GAN=model_choices[parser.model_type](num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
 
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -102,7 +125,7 @@ for epoch in range(num_epochs):
                   % (epoch, num_epochs, i, len(dataloader),
                      loss_d, loss_g, critic_score_real, critic_score_fake))
            
-        if GAN.iters % image_iteration == 0 or (epoch == num_epochs-1 and i == len(dataloader)-1):
+        if GAN.iters % image_iteration == 0 or (i == len(dataloader)-1):
             with torch.no_grad():
                 fake_images=GAN.generator(fixed_noise).detach().cpu()
             img_grid=vutils.make_grid(fake_images, padding=2, normalize=True)

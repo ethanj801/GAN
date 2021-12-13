@@ -165,6 +165,17 @@ class WGAN():
         
         self.iters +=1 #We only increment iteration number on training of Discriminator
         return loss_d, critic_score_real, critic_score_fake
+    
+
+    def set_learning_rate_D(self,lr):
+        """Updates the learning rate of the critic optimizer. Useful as when models are loaded optimizer learning rates are overwritten"""
+        for group in self.optimizerD.param_groups:
+            group['lr'] = lr
+
+    def set_learning_rate_G(self,lr):
+        """Updates the learning rate of the generator optimizer. Useful as when models are loaded optimizer learning rates are overwritten"""
+        for group in self.optimizerG.param_groups:
+            group['lr'] = lr
             
     def train_generator(self,batch_size):
         """Trains generator on a single batch and returns generator loss."""
