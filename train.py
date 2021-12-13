@@ -60,6 +60,7 @@ model_load_path = args.model_load_path
 model_save_folder = args.model_save_path
 checkpoint_save_frequency = args.checkpoint_save_frequency
 
+
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 epoch = 0
@@ -99,46 +100,82 @@ if model_load_path is not None:
 
 else:
     total_epoch = 0 
-
+print(summary(GAN.discriminator,(3,image_size,image_size)))
+print(summary(GAN.generator,(latent_vector_size,1,1)))
 
 writer = SummaryWriter(args.tensorboard_folder)
 
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")
-for epoch in range(num_epochs):
-    #Per batch
-    start_time = time.time()
-    
-    for i, data in enumerate(dataloader, 0):
-        images = data[0]
-        loss_d, critic_score_real, critic_score_fake = GAN.train_discriminator(images)
-        if i%generator_training_interval==0:
-            loss_g = GAN.train_generator(batch_size)
-            writer.add_scalar('Generator Loss',loss_g,GAN.iters)
 
-        writer.add_scalar('Discriminator Loss',loss_d,GAN.iters)
-        writer.add_scalar('Critic Real Score',critic_score_real,GAN.iters)
-        writer.add_scalar('Critic Fake Score',critic_score_fake,GAN.iters)
+if args.model_type == 'WGAN':
+    for epoch in range(num_epochs):
+        #Per batch
+        start_time = time.time()
+        
+        for i, data in enumerate(dataloader, 0):
+            images = data[0]
+            loss_d, critic_score_real, critic_score_fake = GAN.train_discriminator(images)
+            if i%generator_training_interval==0:
+                loss_g = GAN.train_generator(batch_size)
+                writer.add_scalar('Generator Loss',loss_g,GAN.iters)
 
-        if i % 50 == 0:
+            writer.add_scalar('Discriminator Loss',loss_d,GAN.iters)
+            writer.add_scalar('Critic Real Score',critic_score_real,GAN.iters)
+            writer.add_scalar('Critic Fake Score',critic_score_fake,GAN.iters)
 
-            print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tCritic Real: %.4f\tCritic Fake %.4f'
-                  % (epoch, num_epochs, i, len(dataloader),
-                     loss_d, loss_g, critic_score_real, critic_score_fake))
-           
-        if GAN.iters % image_iteration == 0 or (i == len(dataloader)-1):
-            with torch.no_grad():
-                fake_images=GAN.generator(fixed_noise).detach().cpu()
-            img_grid=vutils.make_grid(fake_images, padding=2, normalize=True)
-            writer.add_image('Fake',img_grid,GAN.iters)
+            if i % 50 == 0:
 
-            img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
-            writer.add_image('Real Images', img_grid)
-    
-    print((time.time()-start_time)//60,'minutes elapsed this epoch')
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tCritic Real: %.4f\tCritic Fake %.4f'
+                      % (epoch, num_epochs, i, len(dataloader),
+                         loss_d, loss_g, critic_score_real, critic_score_fake))
+               
+            if GAN.iters % image_iteration == 0 or (i == len(dataloader)-1):
+                with torch.no_grad():
+                    fake_images=GAN.generator(fixed_noise).detach().cpu()
+                img_grid=vutils.make_grid(fake_images, padding=2, normalize=True)
+                writer.add_image('Fake',img_grid,GAN.iters)
 
-    if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
-        GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+                img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
+                writer.add_image('Real Images', img_grid)
+        
+        print((time.time()-start_time)//60,'minutes elapsed this epoch')
+
+        if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
+            GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+elif args.model_type =='DCGAN':
+    for epoch in range(num_epochs):
+        #Per batch
+        start_time = time.time()
+        
+        for i, data in enumerate(dataloader, 0):
+            images = data[0]
+            loss_d = GAN.train_discriminator(images)
+            if i%generator_training_interval==0:
+                loss_g = GAN.train_generator(batch_size)
+                writer.add_scalar('Generator Loss',loss_g,GAN.iters)
+
+            writer.add_scalar('Discriminator Loss',loss_d,GAN.iters)
+
+            if i % 50 == 0:
+
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
+                      % (epoch, num_epochs, i, len(dataloader),
+                         loss_d, loss_g))
+               
+            if GAN.iters % image_iteration == 0 or (i == len(dataloader)-1):
+                with torch.no_grad():
+                    fake_images=GAN.generator(fixed_noise).detach().cpu()
+                img_grid=vutils.make_grid(fake_images, padding=2, normalize=True)
+                writer.add_image('Fake',img_grid,GAN.iters)
+
+                img_grid=vutils.make_grid(data[0].to(device)[:64], padding=2, normalize=True).cpu()
+                writer.add_image('Real Images', img_grid)
+        
+        print((time.time()-start_time)//60,'minutes elapsed this epoch')
+
+        if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
+            GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')    
     
 
 
