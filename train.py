@@ -40,7 +40,7 @@ parser.add_argument('--tensorboard_folder',type = str, default ='runs/')
 args=parser.parse_args()
 
 model_choices = {'DCGAN':DCGAN,'WGAN':WGAN}
-if parser.model_type not in model_choices:
+if args.model_type not in model_choices:
     raise Exception('Invalid Model Type')
 
 torch.backends.cudnn.benchmark = True
@@ -86,7 +86,7 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                                transforms.RandomHorizontalFlip()]))
 
 
-GAN=model_choices[parser.model_type](num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
+GAN=model_choices[args.model_type](num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
 
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers)
