@@ -7,6 +7,7 @@ from models import Discriminator, Generator
 from utilities import weights_init, requires_grad
 from torch.nn import functional as F
 from WGAN import WGAN
+import numpy as np 
 
 class WGAN_GP(WGAN):
     """Complete WGAN model.
