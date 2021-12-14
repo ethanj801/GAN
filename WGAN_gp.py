@@ -24,7 +24,7 @@ class WGAN_GP(WGAN):
 
 
         """
-        super().__init__()
+        super().__init__(num_gpu, num_features,n_convolution_blocks,lr=lr, latent_vector_size=latent_vector_size, AMP=AMP)
         self.lambda_gp=lambda_gp
 
     def compute_gradient_penalty(real_samples, fake_samples): 
