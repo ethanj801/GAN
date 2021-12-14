@@ -118,7 +118,7 @@ writer = SummaryWriter(args.tensorboard_folder)
 fixed_noise = torch.randn(64, latent_vector_size, 1, 1, device=device) #fixed noise for plotting
 print("Starting Training Loop...")
 
-if args.model_type == 'WGAN':
+if args.model_type in ['WGAN','WGAN-gp']:
     for epoch in range(num_epochs):
         #Per batch
         start_time = time.time()
