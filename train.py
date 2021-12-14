@@ -15,11 +15,13 @@ from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from WGAN import WGAN
+from WGAN-gp import WGAN_gp
 from DCGAN import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from pytorch_fid import fid_score
 #TODO add inception calculations stuff
+#TODO add DCGAN regularization
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--amp',type =bool, default = True, help='Whether to use Automatic Mixed Precision')
@@ -37,9 +39,12 @@ parser.add_argument('--precomputed_inception_score_path',type =str,default="home
 parser.add_argument('--nz',type =int,default=256,help='Latent vector size')
 parser.add_argument('--model_type',type =str,default='DCGAN',help='Model to use')
 parser.add_argument('--tensorboard_folder',type = str, default ='runs/')
+parser.add_argument('-lrd','--learning_rate_d',type = float, default=None,help='learning rate of discriminator')
+parser.add_argument('-lrg','--learning_rate_g',type = float, default=None,help='learning rate of generator')
 args=parser.parse_args()
 
-model_choices = {'DCGAN':DCGAN,'WGAN':WGAN}
+model_choices = {'DCGAN':DCGAN,'WGAN':WGAN,'WGAN-gp':WGAN_gp}
+
 if args.model_type not in model_choices:
     raise Exception('Invalid Model Type')
 
@@ -59,7 +64,8 @@ num_epochs = args.epochs
 model_load_path = args.model_load_path
 model_save_folder = args.model_save_path
 checkpoint_save_frequency = args.checkpoint_save_frequency
-
+lr_g = args.learning_rate_g
+lr_d = args.learning_rate_d
 
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
@@ -86,8 +92,12 @@ dataset2 = dset.ImageFolder(root=IMAGE_PATH2,
                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                transforms.RandomHorizontalFlip()]))
 
-
 GAN=model_choices[args.model_type](num_gpu, num_features, n_convolution_blocks,latent_vector_size=latent_vector_size,AMP=amp)
+if lr_d is not None:
+    GAN.set_learning_rate_D(lr_d)
+if lr_g is not None:
+    GAN.set_learning_rate_G(lr_g)
+
 
 device = GAN.device
 dataloader = torch.utils.data.DataLoader(torch.utils.data.ConcatDataset([dataset,dataset2]), batch_size=batch_size, shuffle=True, num_workers=num_workers,drop_last=True)

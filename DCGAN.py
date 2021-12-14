@@ -201,3 +201,14 @@ class DCGAN():
         
         return errG.detach()
 
+    def set_learning_rate_D(self,lr):
+        """Updates the learning rate of the critic optimizer. Useful as when models are loaded optimizer learning rates are overwritten"""
+        for group in self.optimizerD.param_groups:
+            group['lr'] = lr
+
+    def set_learning_rate_G(self,lr):
+        """Updates the learning rate of the generator optimizer. Useful as when models are loaded optimizer learning rates are overwritten"""
+        for group in self.optimizerG.param_groups:
+            group['lr'] = lr
+            
+
