@@ -15,7 +15,7 @@ from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from WGAN import WGAN
-from WGAN_gp import WGAN_gp
+from WGAN_gp import WGAN_GP
 from DCGAN import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
@@ -43,7 +43,7 @@ parser.add_argument('-lrd','--learning_rate_d',type = float, default=None,help='
 parser.add_argument('-lrg','--learning_rate_g',type = float, default=None,help='learning rate of generator')
 args=parser.parse_args()
 
-model_choices = {'DCGAN':DCGAN,'WGAN':WGAN,'WGAN-gp':WGAN_gp}
+model_choices = {'DCGAN':DCGAN,'WGAN':WGAN,'WGAN-gp':WGAN_GP}
 
 if args.model_type not in model_choices:
     raise Exception('Invalid Model Type')
