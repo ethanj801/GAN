@@ -15,7 +15,7 @@ from torchvision.utils import save_image, make_grid
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from WGAN import WGAN
-from WGAN-gp import WGAN_gp
+from WGAN_gp import WGAN_gp
 from DCGAN import DCGAN
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
