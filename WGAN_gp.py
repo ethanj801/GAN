@@ -16,7 +16,7 @@ class WGAN_GP(WGAN):
     """
 
     def __init__(self,num_gpu, num_features, n_convolution_blocks,lr = 0.00005,
-                 latent_vector_size=128, AMP = False):
+                 latent_vector_size=128, AMP = False,lambda_gp = 10):
         """Constructor for DCGAN Class.
         
         Args:
