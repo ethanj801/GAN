@@ -27,7 +27,7 @@ class WGAN_GP(WGAN):
         super().__init__(num_gpu, num_features,n_convolution_blocks,lr=lr, latent_vector_size=latent_vector_size, AMP=AMP)
         self.lambda_gp=lambda_gp
 
-    def compute_gradient_penalty(real_samples, fake_samples): 
+    def compute_gradient_penalty(self,real_samples, fake_samples): 
         #taken from https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
