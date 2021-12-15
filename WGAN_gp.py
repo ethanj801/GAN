@@ -32,24 +32,45 @@ class WGAN_GP(WGAN):
         #taken from https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
-        alpha = torch.tensor(np.random.random((real_samples.size(0), 1, 1, 1)), device = self.device)
-        # Get random interpolation between real and fake samples
-        interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
-        d_interpolates = self.discriminator(interpolates)
-        #fake = Variable(Tensor(real_samples.shape[0], 1).fill_(1.0), requires_grad=False)
-        fake =  torch.ones(real_samples.shape[0], 1, device = self.device, requires_grad =False)
-        # Get gradient w.r.t. interpolates
-        gradients = autograd.grad(
-            outputs=d_interpolates,
-            inputs=interpolates,
-            grad_outputs=fake,
-            create_graph=True,
-            retain_graph=True,
-            only_inputs=True,
-        )[0]
-        gradients = gradients.view(gradients.size(0), -1)
-        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-        return gradient_penalty
+        if self.amp:
+            with torch.cuda.amp.autocast():
+                alpha = torch.tensor(np.random.random((real_samples.size(0), 1, 1, 1)), device = self.device)
+                # Get random interpolation between real and fake samples
+                interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
+                d_interpolates = self.discriminator(interpolates)
+                #fake = Variable(Tensor(real_samples.shape[0], 1).fill_(1.0), requires_grad=False)
+                fake =  torch.ones(real_samples.shape[0], 1, device = self.device, requires_grad =False)
+                # Get gradient w.r.t. interpolates
+                gradients = autograd.grad(
+                    outputs=d_interpolates,
+                    inputs=interpolates,
+                    grad_outputs=fake,
+                    create_graph=True,
+                    retain_graph=True,
+                    only_inputs=True,
+                )[0]
+                gradients = gradients.view(gradients.size(0), -1)
+                gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+                return gradient_penalty
+        else:
+            alpha = torch.tensor(np.random.random((real_samples.size(0), 1, 1, 1)), device = self.device)
+            # Get random interpolation between real and fake samples
+            interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
+            d_interpolates = self.discriminator(interpolates)
+            #fake = Variable(Tensor(real_samples.shape[0], 1).fill_(1.0), requires_grad=False)
+            fake =  torch.ones(real_samples.shape[0], 1, device = self.device, requires_grad =False)
+            # Get gradient w.r.t. interpolates
+            gradients = autograd.grad(
+                outputs=d_interpolates,
+                inputs=interpolates,
+                grad_outputs=fake,
+                create_graph=True,
+                retain_graph=True,
+                only_inputs=True,
+            )[0]
+            gradients = gradients.view(gradients.size(0), -1)
+            gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+            return gradient_penalty
 
 
     def train_discriminator(self,images):
