@@ -71,6 +71,8 @@ lr_g = args.learning_rate_g
 lr_d = args.learning_rate_d
 if args.FID_folder is not None:
     inception_folder = os.path.join(scratch_directory,args.FID_folder)
+    if not os.path.exists(inception_folder):
+        os.makedir(inception_folder)
 else: 
     inception_folder = None
 fid_frequency = args.FID_frequency
@@ -165,10 +167,12 @@ if args.model_type in ['WGAN','WGAN-gp']:
         if (inception_folder is not None and epoch % fid_frequency == 0) or (epoch == num_epochs - 1):
             start_time = time.time()
 
+            n = 0
             for i in range(10000 //batch_size +1):
                 images = GAN.generate_fake_images(batch_size)
                 for image in images:
-                    save_image(image,inception_folder+str(i)+'.jpg')
+                    save_image(image,inception_folder+"/"+str(n)+'.jpg')
+                    n+=1 
             fid=fid_score.calculate_fid_given_paths((precomputed_inception_score_path,inception_folder),128, device, 2048, num_workers=4)
 
 
@@ -213,11 +217,13 @@ elif args.model_type =='DCGAN':
         
         if (inception_folder is not None and epoch % fid_frequency == 0) or (epoch == num_epochs - 1):
             start_time = time.time()
-
+           
+            n = 0
             for i in range(10000 //batch_size +1):
                 images = GAN.generate_fake_images(batch_size)
                 for image in images:
-                    save_image(image,inception_folder+str(i)+'.jpg')
+                    save_image(image,inception_folder+"/"+str(n)+'.jpg')
+                    n+=1             
             fid=fid_score.calculate_fid_given_paths((precomputed_inception_score_path,inception_folder),128, device, 2048, num_workers=4)
             writer.add_scalar('FID Score',fid,GAN.iters)
             print(f'FID Score: {fid:.4f}')
