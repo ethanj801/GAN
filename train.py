@@ -21,6 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 from pytorch_fid import fid_score
 #TODO add inception calculations stuff
+#TODO add averaging for losses and scores
 #TODO add DCGAN regularization
 
 parser = argparse.ArgumentParser()

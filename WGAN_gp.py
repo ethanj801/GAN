@@ -40,7 +40,7 @@ class WGAN_GP(WGAN):
         #fake = Variable(Tensor(real_samples.shape[0], 1).fill_(1.0), requires_grad=False)
         fake =  torch.ones(real_samples.shape[0], 1, device = self.device, requires_grad =False)
         # Get gradient w.r.t. interpolates
-        gradients = autograd.grad(
+        gradients = torch.autograd.grad(
             outputs=d_interpolates,
             inputs=interpolates,
             grad_outputs=fake,
