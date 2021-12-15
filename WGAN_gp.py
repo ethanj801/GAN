@@ -32,8 +32,8 @@ class WGAN_GP(WGAN):
         #taken from https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
-        alpha = torch.rand(real_samples.size(0), 1, 1, 1,device=self.device)
-        torch.tensor(np.random.random((real_samples.size(0), 1, 1, 1)), device = self.device)
+        alpha = torch.rand(real_samples.size(0), 1, device=self.device)
+        #torch.tensor(np.random.random((real_samples.size(0), 1, 1, 1)), device = self.device)
         # Get random interpolation between real and fake samples
         interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
         d_interpolates = self.discriminator(interpolates)

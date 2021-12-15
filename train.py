@@ -42,6 +42,8 @@ parser.add_argument('--model_type',type =str,default='DCGAN',help='Model to use'
 parser.add_argument('--tensorboard_folder',type = str, default ='runs/')
 parser.add_argument('-lrd','--learning_rate_d',type = float, default=None,help='learning rate of discriminator')
 parser.add_argument('-lrg','--learning_rate_g',type = float, default=None,help='learning rate of generator')
+parser.add_argument('--FID_folder',type = str, default=None,help='Folder name to save images from FID calculations in')
+parser.add_argument('--FID_frequency',type = str, default =2, help ='How often to calculate FID score')
 args=parser.parse_args()
 
 model_choices = {'DCGAN':DCGAN,'WGAN':WGAN,'WGAN-gp':WGAN_GP}
@@ -67,6 +69,8 @@ model_save_folder = args.model_save_path
 checkpoint_save_frequency = args.checkpoint_save_frequency
 lr_g = args.learning_rate_g
 lr_d = args.learning_rate_d
+inception_folder = os.path.join(scratch_directory,args.FID_folder)
+fid_frequency = args.FID_frequency
 
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
@@ -154,6 +158,19 @@ if args.model_type in ['WGAN','WGAN-gp']:
 
         if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
             GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+        
+        if (inception_folder is not None and epochs % fid_frequency == 0) or (epoch == num_epochs - 1):
+            start_time = time.time()
+
+            for i in range(10000 //batch_size +1):
+                images = GAN.generate_fake_images(batch_size)
+                for image in images:
+                    save_image(inception_folder+str(i)+'.jpg')
+            fid=fid_score.calculate_fid_given_paths(precomputed_inception_score_path,inception_folder)
+            writer.add_scalar('FID Score',fid,GAN.iters)
+
+            print((time.time()-start_time)//60,'minutes to calculate FID score')
+
 elif args.model_type =='DCGAN':
     for epoch in range(num_epochs):
         #Per batch
@@ -187,6 +204,21 @@ elif args.model_type =='DCGAN':
 
         if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
             GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')    
+
+                if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
+            GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
+        
+        if (inception_folder is not None and epochs % fid_frequency == 0) or (epoch == num_epochs - 1):
+            start_time = time.time()
+
+            for i in range(10000 //batch_size +1):
+                images = GAN.generate_fake_images(batch_size)
+                for image in images:
+                    save_image(inception_folder+str(i)+'.jpg')
+            fid=fid_score.calculate_fid_given_paths(precomputed_inception_score_path,inception_folder)
+            writer.add_scalar('FID Score',fid,GAN.iters)
+
+            print((time.time()-start_time)//60,'minutes to calculate FID score')
     
 
 
