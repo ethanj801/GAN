@@ -69,7 +69,10 @@ model_save_folder = args.model_save_path
 checkpoint_save_frequency = args.checkpoint_save_frequency
 lr_g = args.learning_rate_g
 lr_d = args.learning_rate_d
-inception_folder = os.path.join(scratch_directory,args.FID_folder)
+if args.FID_folder is not None:
+    inception_folder = os.path.join(scratch_directory,args.FID_folder)
+else: 
+    inception_folder = None
 fid_frequency = args.FID_frequency
 
 IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-256px'
