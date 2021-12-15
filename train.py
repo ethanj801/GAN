@@ -79,7 +79,7 @@ IMAGE_PATH ='/home/ej74/Resized' #'/input/flickrfaceshq-dataset-nvidia-resized-2
 IMAGE_PATH2 ='/home/ej74/CelebA/img_align_celeba'#'celeba-dataset/img_align_celeba/'
 epoch = 0
 
-precomputed_inception_score_path = ('/home/ej74/128px.nz') #m1, s1
+precomputed_inception_score_path = ('/home/ej74/128px.npz') #m1, s1
 
 
 
