@@ -169,7 +169,10 @@ if args.model_type in ['WGAN','WGAN-gp']:
                 images = GAN.generate_fake_images(batch_size)
                 for image in images:
                     save_image(image,inception_folder+str(i)+'.jpg')
-            fid=fid_score.calculate_fid_given_paths(precomputed_inception_score_path,inception_folder)
+            fid=fid_score.calculate_fid_given_paths((precomputed_inception_score_path,inception_folder),128, device, 2048, num_workers=4)
+
+
+                
             writer.add_scalar('FID Score',fid,GAN.iters)
             print(f'FID Score: {fid:.4f}')
             print((time.time()-start_time)//60,'minutes to calculate FID score')
@@ -215,7 +218,7 @@ elif args.model_type =='DCGAN':
                 images = GAN.generate_fake_images(batch_size)
                 for image in images:
                     save_image(image,inception_folder+str(i)+'.jpg')
-            fid=fid_score.calculate_fid_given_paths(precomputed_inception_score_path,inception_folder)
+            fid=fid_score.calculate_fid_given_paths((precomputed_inception_score_path,inception_folder),128, device, 2048, num_workers=4)
             writer.add_scalar('FID Score',fid,GAN.iters)
             print(f'FID Score: {fid:.4f}')
             print((time.time()-start_time)//60,'minutes to calculate FID score')
