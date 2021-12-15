@@ -204,9 +204,6 @@ elif args.model_type =='DCGAN':
 
         if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
             GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')    
-
-                if epoch %checkpoint_save_frequency==0 or epoch ==num_epochs-1:
-            GAN.save_checkpoint(model_save_folder,total_epoch+epoch,f'epoch{total_epoch+epoch}_model.pt')
         
         if (inception_folder is not None and epochs % fid_frequency == 0) or (epoch == num_epochs - 1):
             start_time = time.time()
