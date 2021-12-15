@@ -72,7 +72,7 @@ lr_d = args.learning_rate_d
 if args.FID_folder is not None:
     inception_folder = os.path.join(scratch_directory,args.FID_folder)
     if not os.path.exists(inception_folder):
-        os.makedir(inception_folder)
+        os.mkdir(inception_folder)
 else: 
     inception_folder = None
 fid_frequency = args.FID_frequency
